@@ -55,6 +55,7 @@ def rand_logs(data:list, n:int):
     user_logs = {}
     users = []
 
+    # pobieranie danych dla wszystkich użytkowników
     for line in data:
         temp_dict = to_dict(line)
         temp_user = get_user_from_log(temp_dict)
@@ -65,12 +66,14 @@ def rand_logs(data:list, n:int):
             user_logs[temp_user]=[line]
             users.append(temp_user)
 
+    #losowanie naszego użytkownika i pobieranie jego logów
     user = users[int(random.random()*len(users))] 
     logs = []
 
     for i in user_logs.get(user):
         logs.append(i)
 
+    #jeśli logów jest więcej niż docelowa liczba to losuje n wpisów
     if(len(logs)>n):
         for j in logs:
             if(random.random()>=0.5 and len(logs)>n):
@@ -80,7 +83,7 @@ def rand_logs(data:list, n:int):
     return logs
 
 
-# 4b
+# 4b - Niedokończone
 def log_stat(data:list):
     user_logs = {}  # "user": [(start, end), (start, end)]
     user_ip = {}    # "ip": "user"
@@ -114,21 +117,20 @@ def log_user_frequency(data:list):
     for line in data:
         temp_dict = to_dict(line)
         temp_user = get_user_from_log(temp_dict)
-        #if(temp_user==""):continue
         temp_type = get_message_type(temp_dict.get("description"))
-        #print(temp_type, temp_user, temp_dict)
+        #jeśli użytkownik prubuje sie zalogować to dodajemy do jego ilości:
         if(temp_type == "login successful" or temp_type == "login failed"):
             if(user_logs.get(temp_user)):
                 user_logs[temp_user]+=1
             else:
                 user_logs[temp_user]=1
     
-    #print(user_logs)
+    
     user_max = ""
     count_max = -1
     user_min = ""
     count_min = 99999999
-
+    # sprawdzanie najczęstszego i najmniej często logującego się użytkownika
     for key in user_logs:
         temp = user_logs.get(key)
         if(temp>count_max):
@@ -142,35 +144,44 @@ def log_user_frequency(data:list):
 
 # 1
 try: 
+    #pobieranie nazwy pliku i danych
     file_path = input()
     file = open(file_path, "r")
     data_lines = [tmp.strip() for tmp in file.readlines()]
 
     # 3
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout, encoding='utf-8')
-    logging.basicConfig(level=logging.DEBUG, stream=sys.stdout, encoding='utf-8')
-    logging.basicConfig(level=logging.WARNING, stream=sys.stdout, encoding='utf-8')
-    logging.basicConfig(level=logging.ERROR, stream=sys.stderr, encoding='utf-8')
-    logging.basicConfig(level=logging.CRITICAL, stream=sys.stderr, encoding='utf-8')
+    logger_out = logging.getLogger("out")
+    logger_out.setLevel(logging.DEBUG)
+    out_handler = logging.StreamHandler(sys.stdout)
+    out_handler.setFormatter(logging.Formatter('%(levelname)s:%(message)s'))
+    logger_out.addHandler(out_handler)
+
+    logger_err = logging.getLogger("err")
+    err_handler = logging.StreamHandler(sys.stderr)
+    #err_handler = logging.FileHandler("output.txt")
+    err_handler.setLevel(logging.ERROR)
+    err_handler.setFormatter(logging.Formatter('%(levelname)s:%(message)s'))
+    logger_err.addHandler(err_handler)
 
     for line in data_lines:
-        print(line)
+        print("oryginalny wiersz: ", line)
         newl = to_dict(line)
-        print(newl)
-        print(get_ipv4s_from_log(newl))
-        print(get_user_from_log(newl))
-        #
+        print("reprezentacja wiersza (1b): ", newl)
+        print("adres ipv4: ", get_ipv4s_from_log(newl))
+        print("user: ", get_user_from_log(newl))
         type = get_message_type(newl.get("description"))
-        
-        logging.debug(len(line))
-        if(type == "login successful" or type == "connection closed"): logging.info(type)
-        elif(type == "login failed"): logging.warning(type)
-        elif(type == "wrong username" or type == "wrong password"): logging.error(type)
-        elif(type == "breach attempt"): logging.critical(type)
+        # logging number of bytes (1 for every sign)
+        logger_out.debug( str(len(line)) )
+        # logging other messages
+        if(type == "login successful" or type == "connection closed"): logger_out.info(type)
+        elif(type == "login failed"): logger_err.warning(type)
+        elif(type == "wrong username" or type == "wrong password"): logger_err.error(type)
+        elif(type == "breach attempt"): logger_err.critical(type, )
         print("\n")
-        pass
     
-    print(rand_logs(data_lines, 2))
+    # 4a
+    print(rand_logs(data_lines, 5))
+    # 4c
     log_user_frequency(data_lines)
 
 
